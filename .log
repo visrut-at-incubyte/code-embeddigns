@@ -6,3 +6,5 @@ pnpm tsc --init
 > add "node" in tsconfig.json > compilerOptions > types field
 pnpm i @types/node -D
 pnpm i dotenv
+
+docker run -p 6333:6333 --name code_similarity_qdrant -d qdrant/qdrant

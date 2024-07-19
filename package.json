@@ -16,6 +16,7 @@
     "typescript": "^5.5.3"
   },
   "dependencies": {
+    "@qdrant/js-client-rest": "^1.10.0",
     "dotenv": "^16.4.5",
     "glob": "^11.0.0",
     "gpt-tokenizer": "^2.2.1",
