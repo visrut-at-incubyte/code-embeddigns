@@ -1,24 +1,26 @@
-import * as fs from "fs";
-import * as path from "path";
+import { glob } from "glob";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const scanDirectory = (dir: string): string[] => {
-  let results: string[] = [];
-  const list = fs.readdirSync(dir);
-  list.forEach((file) => {
-    file = path.resolve(dir, file);
-    const stat = fs.statSync(file);
-    if (stat?.isDirectory()) {
-      results = results.concat(scanDirectory(file));
-    } else {
-      results.push(file);
-    }
+const scanDirectory = async (dir: string, ignorePatterns: string[] = []) => {
+  const paths = await glob("**/*", {
+    ignore: ignorePatterns,
+    cwd: dir,
+    withFileTypes: true,
   });
-  return results;
+
+  return paths.filter((path) => path.isFile()).map((file) => file.fullpath());
 };
 
-scanDirectory(process.cwd()).forEach((file) => {
-  console.log(file);
-});
+const ignorePatterns = process.env.IGNORE_PATTERNS?.split(",") || [];
+
+const scan = async () => {
+  const files = await scanDirectory(process.cwd(), ignorePatterns);
+  console.log(files.length);
+  // for (const file of files) {
+  //   console.log(file);
+  // }
+};
+
+scan();
