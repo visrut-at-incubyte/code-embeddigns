@@ -1,0 +1,8 @@
+pnpm init
+pnpm i ts-node -D
+pnpm i typescript -D
+pnpm tsc --init
+
+> add "node" in tsconfig.json > compilerOptions > types field
+pnpm i @types/node -D
+pnpm i dotenv
