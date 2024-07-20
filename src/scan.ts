@@ -4,6 +4,10 @@ import * as fs from "fs/promises";
 import * as dotenv from "dotenv";
 import { encode } from "gpt-tokenizer";
 import { QdrantClient } from "@qdrant/js-client-rest";
+import {
+  OpenAIClient as AzureOpenAIClient,
+  AzureKeyCredential,
+} from "@azure/openai";
 
 interface CodeFile {
   path: string;
@@ -18,6 +22,11 @@ dotenv.config();
 const vec_db = new QdrantClient({
   url: "http://localhost:6333",
 });
+
+const openai_azure = new AzureOpenAIClient(
+  process.env.AZURE_LLM_ENDPOINT!,
+  new AzureKeyCredential(process.env.AZURE_LLM_API_KEY!)
+);
 
 const cache_dir = path.join(process.cwd(), "cache");
 fs.mkdir(cache_dir, { recursive: true });
@@ -59,13 +68,48 @@ const get_code_files_within_token_limit = async (
   return code_files;
 };
 
+const add_vector_to_code_file = async (code_file: CodeFile) => {
+  const vectorCachePath = path.join(
+    cache_dir,
+    `vector_${code_file.base_name}.json`
+  );
+
+  try {
+    const cachedVectorData = await fs.readFile(vectorCachePath, "utf-8");
+    code_file.vector = JSON.parse(cachedVectorData);
+  } catch {
+    try {
+      const vectors = await openai_azure.getEmbeddings(
+        process.env.AZURE_LLM_MODEL_NAME!,
+        [code_file.source_code]
+      );
+
+      if (vectors.data && vectors.data.length > 0) {
+        code_file.vector = vectors.data[0].embedding;
+        await fs.writeFile(
+          vectorCachePath,
+          JSON.stringify(code_file.vector),
+          "utf-8"
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch embeddings:", error);
+    }
+  }
+};
+
 const scan = async () => {
-  const file_paths = await scan_directory(
+  await create_collection_if_not_exist();
+
+  let file_paths = await scan_directory(
     path.join(process.cwd(), process.env.CODEBASE_PATH ?? ""),
     ignore_patterns
   );
 
+  file_paths = file_paths.slice(0, 1000);
+
   const code_files = await get_code_files_within_token_limit(file_paths);
+  await Promise.all(code_files.map(add_vector_to_code_file));
 
   const chunks = chunk_array(code_files, 10);
   chunks.forEach((chunk, chunkIndex) => {
@@ -90,7 +134,7 @@ const scan = async () => {
 
 scan();
 
-const scan_directory = async (dir: string, ignorePatterns: string[] = []) => {
+async function scan_directory(dir: string, ignorePatterns: string[] = []) {
   const paths = await glob("**/*", {
     ignore: ignorePatterns,
     cwd: dir,
@@ -98,7 +142,7 @@ const scan_directory = async (dir: string, ignorePatterns: string[] = []) => {
   });
 
   return paths.filter((path) => path.isFile()).map((file) => file.fullpath());
-};
+}
 
 const chunk_array = <T>(array: T[], size: number): T[][] => {
   const result: T[][] = [];
@@ -107,3 +151,15 @@ const chunk_array = <T>(array: T[], size: number): T[][] => {
   }
   return result;
 };
+
+async function create_collection_if_not_exist() {
+  const { collections } = await vec_db.getCollections();
+  if (collections.length <= 0) {
+    vec_db.createCollection("codebase", {
+      vectors: {
+        size: 1536,
+        distance: "Cosine",
+      },
+    });
+  }
+}
