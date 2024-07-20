@@ -4,10 +4,7 @@ import * as fs from "fs/promises";
 import * as dotenv from "dotenv";
 import { encode } from "gpt-tokenizer";
 import { QdrantClient } from "@qdrant/js-client-rest";
-import {
-  OpenAIClient as AzureOpenAIClient,
-  AzureKeyCredential,
-} from "@azure/openai";
+import axios from "axios";
 
 interface CodeFile {
   path: string;
@@ -22,11 +19,6 @@ dotenv.config();
 const vec_db = new QdrantClient({
   url: "http://localhost:6333",
 });
-
-const openai_azure = new AzureOpenAIClient(
-  process.env.AZURE_LLM_ENDPOINT!,
-  new AzureKeyCredential(process.env.AZURE_LLM_API_KEY!)
-);
 
 const cache_dir = path.join(process.cwd(), "cache");
 fs.mkdir(cache_dir, { recursive: true });
@@ -79,13 +71,25 @@ const add_vector_to_code_file = async (code_file: CodeFile) => {
     code_file.vector = JSON.parse(cachedVectorData);
   } catch {
     try {
-      const vectors = await openai_azure.getEmbeddings(
-        process.env.AZURE_LLM_MODEL_NAME!,
-        [code_file.source_code]
+      const response = await axios.post(
+        "https://api.jina.ai/v1/embeddings",
+        {
+          model: "jina-clip-v1",
+          embedding_type: "float",
+          input: [{ text: code_file.source_code }],
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer <API_KEY>",
+          },
+        }
       );
 
-      if (vectors.data && vectors.data.length > 0) {
-        code_file.vector = vectors.data[0].embedding;
+      const vectors = response.data.data;
+
+      if (vectors && vectors.length > 0) {
+        code_file.vector = vectors[0].embedding;
         await fs.writeFile(
           vectorCachePath,
           JSON.stringify(code_file.vector),
@@ -93,11 +97,20 @@ const add_vector_to_code_file = async (code_file: CodeFile) => {
         );
       }
     } catch (error) {
-      console.error("Failed to fetch embeddings:", error);
+      console.error("Failed to fetch embeddings for", code_file.base_name);
     }
   }
+
+  await fs.writeFile(
+    path.join(cache_dir, path.basename(code_file.path) + ".json"),
+    JSON.stringify(code_file),
+    "utf-8"
+  );
 };
 
+/*************************************************************************
+MAIN FUNCTION
+*************************************************************************/
 const scan = async () => {
   await create_collection_if_not_exist();
 
@@ -106,7 +119,7 @@ const scan = async () => {
     ignore_patterns
   );
 
-  file_paths = file_paths.slice(0, 1000);
+  file_paths = file_paths.slice(0, 50);
 
   const code_files = await get_code_files_within_token_limit(file_paths);
   await Promise.all(code_files.map(add_vector_to_code_file));
@@ -130,6 +143,14 @@ const scan = async () => {
       },
     });
   });
+
+  // combine all code_file jsons into single json with list of code_files
+  const code_files_json = JSON.stringify(code_files);
+  await fs.writeFile(
+    path.join(cache_dir, "code_files.json"),
+    code_files_json,
+    "utf-8"
+  );
 };
 
 scan();

@@ -3,3 +3,5 @@
 /data
 /cache
 /.qdrant-initialized
+/dist
+data.json

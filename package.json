@@ -10,17 +10,19 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "@types/minimatch": "^5.1.2",
     "@types/node": "^20.14.11",
+    "@types/plotly.js": "^2.33.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.3"
   },
   "dependencies": {
-    "@azure/openai": "1.0.0-beta.12",
+    "@keckelt/tsne": "^1.0.2",
     "@qdrant/js-client-rest": "^1.10.0",
+    "axios": "^1.7.2",
     "dotenv": "^16.4.5",
     "glob": "^11.0.0",
-    "gpt-tokenizer": "^2.2.1",
-    "minimatch": "^10.0.1"
+    "gpt-tokenizer": "^2.2.1"
   }
 }

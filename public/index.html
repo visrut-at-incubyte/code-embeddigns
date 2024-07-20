@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D t-SNE Plot</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsne@1.0.1/tsne.min.js"></script>
+  </head>
+  <body>
+    <div id="plot" style="width: 100%; height: 100vh"></div>
+    <script>
+      // Function to fetch data from data.json
+      async function fetchData() {
+        const response = await fetch("data.json");
+        const data = await response.json();
+        return data.map((item) => item.vector);
+      }
+
+      // Function to run t-SNE and plot the data
+      async function runTSNEAndPlot() {
+        const vectors = await fetchData();
+
+        // Initialize t-SNE
+        const tsne = new tsnejs.tSNE({
+          dim: 3,
+          perplexity: 5,
+          earlyExaggeration: 4.0,
+          learningRate: 100.0,
+          nIter: 1000,
+          metric: "euclidean",
+        });
+
+        tsne.initDataRaw(vectors);
+        for (let i = 0; i < 500; i++) {
+          tsne.step();
+        }
+
+        const reducedVectors = tsne.getSolution();
+
+        // Create a 3D scatter plot
+        const scatterPlot = {
+          x: reducedVectors.map((v) => v[0]),
+          y: reducedVectors.map((v) => v[1]),
+          z: reducedVectors.map((v) => v[2]),
+          mode: "markers",
+          type: "scatter3d",
+          marker: {
+            size: 5,
+            color: "grey",
+            opacity: 0.5,
+            line: {
+              color: "lightgray",
+              width: 1,
+            },
+          },
+          text: vectors.map((_, i) => `Point ${i}`),
+        };
+
+        // Highlight the first point with a different color
+        const highlightedPoint = {
+          x: [reducedVectors[0][0]],
+          y: [reducedVectors[0][1]],
+          z: [reducedVectors[0][2]],
+          mode: "markers",
+          type: "scatter3d",
+          marker: {
+            size: 8,
+            color: "red",
+            opacity: 0.8,
+            line: {
+              color: "lightgray",
+              width: 1,
+            },
+          },
+          text: ["Question"],
+        };
+
+        // Highlight the top 3 points with a different color
+        const bluePoints = {
+          x: reducedVectors.slice(1, 4).map((v) => v[0]),
+          y: reducedVectors.slice(1, 4).map((v) => v[1]),
+          z: reducedVectors.slice(1, 4).map((v) => v[2]),
+          mode: "markers",
+          type: "scatter3d",
+          marker: {
+            size: 8,
+            color: "blue",
+            opacity: 0.8,
+            line: {
+              color: "black",
+              width: 1,
+            },
+          },
+          text: ["Top 1 Document", "Top 2 Document", "Top 3 Document"],
+        };
+
+        // Create the layout for the plot
+        const layout = {
+          scene: {
+            xaxis: { title: "X" },
+            yaxis: { title: "Y" },
+            zaxis: { title: "Z" },
+          },
+          title: "3D Representation after t-SNE (Perplexity=5)",
+        };
+
+        // Combine all traces
+        const data = [scatterPlot, highlightedPoint, bluePoints];
+
+        // Render the plot
+        Plotly.newPlot("plot", data, layout);
+      }
+
+      // Run the function to fetch data, run t-SNE, and plot the data
+      runTSNEAndPlot();
+    </script>
+  </body>
+</html>

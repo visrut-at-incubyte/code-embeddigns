@@ -10,4 +10,4 @@
 - You have to run this
 - docker run -p 6333:6333 --name code_similarity_qdrant -d qdrant/qdrant
 
-- All code is tightly coupled to Qdrant as a vector database and Azure OpenAI client in typescript
+- All code is tightly coupled to Qdrant as a vector database and Jina AI API
