@@ -157,7 +157,7 @@ async function create_collection_if_not_exist() {
   if (collections.length <= 0) {
     vec_db.createCollection("codebase", {
       vectors: {
-        size: 1536,
+        size: parseInt(process.env.VECTOR_SIZE!),
         distance: "Cosine",
       },
     });
