@@ -53,6 +53,18 @@
         return data;
       }
 
+      function cosineSimilarity(vecA, vecB) {
+        let dotProduct = 0.0;
+        let normA = 0.0;
+        let normB = 0.0;
+        for (let i = 0; i < vecA.length; i++) {
+          dotProduct += vecA[i] * vecB[i];
+          normA += vecA[i] * vecA[i];
+          normB += vecB[i] * vecB[i];
+        }
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+      }
+
       async function runTSNEAndPlot() {
         const data = await fetchData();
         const vectors = data.map((item) => item.vector);
@@ -90,6 +102,7 @@
           },
           text: data.map((item) => item.base_name),
           sourceCode: data.map((item) => item.source_code),
+          vectors: vectors,
           hoverinfo: "text",
         };
 
@@ -106,15 +119,53 @@
 
         Plotly.newPlot("plot", plotData, layout);
 
-        document
-          .getElementById("plot")
-          .on("plotly_click", function (eventData) {
-            const pointNumber = eventData.points[0].pointNumber;
-            const sourceCode = eventData.points[0].data.sourceCode[pointNumber];
-            const sourceCodeElement = document.getElementById("source-code");
-            sourceCodeElement.textContent = sourceCode;
-            hljs.highlightElement(sourceCodeElement);
-          });
+        const plot = document.getElementById("plot");
+
+        plot.on("plotly_hover", function () {
+          plot.style.cursor = "pointer";
+        });
+
+        plot.on("plotly_unhover", function () {
+          plot.style.cursor = "";
+        });
+
+        plot.on("plotly_click", function (eventData) {
+          const pointNumber = eventData.points[0].pointNumber;
+          const sourceCode = eventData.points[0].data.sourceCode[pointNumber];
+          const clickedVector = eventData.points[0].data.vectors[pointNumber];
+          const vectors = eventData.points[0].data.vectors;
+
+          const cosineScores = vectors.map((vec, index) => ({
+            fileName: data[index].base_name,
+            cosineValue: cosineSimilarity(clickedVector, vec),
+            index: index,
+          }));
+
+          // Sort by cosine value descending, excluding the clicked point itself
+          cosineScores.sort((a, b) => b.cosineValue - a.cosineValue);
+
+          const top10Related = cosineScores
+            .filter((_, i) => i !== pointNumber)
+            .slice(0, 10);
+
+          const sourceCodeElement = document.getElementById("source-code");
+          sourceCodeElement.textContent = sourceCode;
+          hljs.highlightElement(sourceCodeElement);
+
+          // Display the list of files sorted by cosine rank
+          const hoverInfoElement = document.getElementById("hover-info");
+          hoverInfoElement.innerHTML =
+            "<h3>Top 10 Related Files:</h3><ul>" +
+            top10Related
+              .map(
+                (item) =>
+                  `<li>${item.fileName} (Cosine: ${item.cosineValue.toFixed(
+                    3
+                  )})</li>`
+              )
+              .join("") +
+            "</ul>";
+        });
       }
 
       runTSNEAndPlot();
