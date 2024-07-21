@@ -18,8 +18,8 @@
     "typescript": "^5.5.3"
   },
   "dependencies": {
+    "@azure/openai": "1.0.0-beta.12",
     "@keckelt/tsne": "^1.0.2",
-    "axios": "^1.7.2",
     "dotenv": "^16.4.5",
     "glob": "^11.0.0",
     "gpt-tokenizer": "^2.2.1"

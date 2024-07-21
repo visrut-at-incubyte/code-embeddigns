@@ -3,7 +3,10 @@ import * as path from "path";
 import * as fs from "fs/promises";
 import * as dotenv from "dotenv";
 import { encode } from "gpt-tokenizer";
-import axios from "axios";
+import {
+  OpenAIClient as AzureOpenAIClient,
+  AzureKeyCredential,
+} from "@azure/openai";
 
 interface CodeFile {
   path: string;
@@ -14,6 +17,11 @@ interface CodeFile {
 }
 
 dotenv.config();
+
+const openai_azure = new AzureOpenAIClient(
+  process.env.AZURE_LLM_ENDPOINT!,
+  new AzureKeyCredential(process.env.AZURE_LLM_API_KEY!)
+);
 
 const cache_dir = path.join(process.cwd(), "cache");
 fs.mkdir(cache_dir, { recursive: true });
@@ -66,22 +74,10 @@ const add_vector_to_code_file = async (code_file: CodeFile) => {
     code_file.vector = JSON.parse(cachedVectorData);
   } catch {
     try {
-      const response = await axios.post(
-        "https://api.jina.ai/v1/embeddings",
-        {
-          model: "jina-clip-v1",
-          embedding_type: "float",
-          input: [{ text: code_file.source_code }],
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer <API_KEY>",
-          },
-        }
+      const { data: vectors } = await openai_azure.getEmbeddings(
+        process.env.AZURE_LLM_MODEL_NAME!,
+        [code_file.source_code]
       );
-
-      const vectors = response.data.data;
 
       if (vectors && vectors.length > 0) {
         code_file.vector = vectors[0].embedding;

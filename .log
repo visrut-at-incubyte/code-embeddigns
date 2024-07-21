@@ -7,4 +7,12 @@ pnpm tsc --init
 pnpm i @types/node -D
 pnpm i dotenv
 
+rm -rf cache
+pnpm scan
+cp cache/code_files.json public/data.json
+cd public
+python -m http.server
+
+.archive
+--------
 docker run -p 6333:6333 --name code_similarity_qdrant -d qdrant/qdrant
