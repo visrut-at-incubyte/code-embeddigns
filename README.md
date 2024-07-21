@@ -11,3 +11,18 @@
 - docker run -p 6333:6333 --name code_similarity_qdrant -d qdrant/qdrant
 
 - All code is tightly coupled to Qdrant as a vector database and Azure Open AI
+
+- Steps to run the code
+
+1. pnpm install
+2. set your source code path in .env file
+3. set openai api key in .env file
+4. pnpm scan
+5. cp cache/code_files.json public/data.json
+6. cd public
+7. python -m http.server 8000
+8. open http://localhost:8000
+
+- Sample Image after scanning the code attached below, for my personal project [wizardsurvey.fun](https://wizardsurvey.fun)
+
+![WizardSurvey.fun Code Visualization](./.github/sample.png)

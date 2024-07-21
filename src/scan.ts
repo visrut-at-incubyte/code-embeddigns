@@ -108,12 +108,10 @@ const add_vector_to_code_file = async (code_file: CodeFile) => {
 MAIN FUNCTION
 *************************************************************************/
 const scan = async () => {
-  let file_paths = await scan_directory(
+  const file_paths = await scan_directory(
     path.join(process.cwd(), process.env.CODEBASE_PATH ?? ""),
     ignore_patterns
   );
-
-  file_paths = file_paths.slice(0, 50);
 
   const code_files = await get_code_files_within_token_limit(file_paths);
   await Promise.all(code_files.map(add_vector_to_code_file));
