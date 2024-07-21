@@ -10,6 +10,7 @@ import {
 
 interface CodeFile {
   path: string;
+  project_relative_path: string;
   source_code: string;
   base_name: string;
   token_count: number;
@@ -50,6 +51,10 @@ const get_code_files_within_token_limit = async (
           token_count,
           path: file_path,
           base_name: path.basename(file_path),
+          project_relative_path: path.relative(
+            path.join(process.cwd(), process.env.CODEBASE_PATH ?? ""),
+            file_path
+          ),
         };
         await fs.writeFile(cache_path, JSON.stringify(code_file), "utf-8");
       }
