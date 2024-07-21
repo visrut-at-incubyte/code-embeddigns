@@ -65,6 +65,28 @@
         return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
       }
 
+      function calculateCentroid(vectors) {
+        const centroid = Array(vectors[0].length).fill(0);
+        vectors.forEach((vec) => {
+          vec.forEach((value, index) => {
+            centroid[index] += value;
+          });
+        });
+        centroid.forEach((_, i) => {
+          centroid[i] /= vectors.length;
+        });
+        return centroid;
+      }
+
+      function euclideanDistance(vecA, vecB) {
+        return Math.sqrt(
+          vecA.reduce(
+            (sum, value, index) => sum + Math.pow(value - vecB[index], 2),
+            0
+          )
+        );
+      }
+
       async function runTSNEAndPlot() {
         const data = await fetchData();
         const vectors = data.map((item) => item.vector);
@@ -84,6 +106,14 @@
         }
 
         const reducedVectors = tsne.getSolution();
+        const centroid = calculateCentroid(reducedVectors);
+        const distances = reducedVectors.map((vec) =>
+          euclideanDistance(vec, centroid)
+        );
+        const maxDistance = Math.max(...distances);
+        const colors = distances.map(
+          (distance) => `hsl(${360 * (distance / maxDistance)}, 100%, 50%)`
+        );
 
         const scatterPlot = {
           x: reducedVectors.map((v) => v[0]),
@@ -93,10 +123,10 @@
           type: "scatter3d",
           marker: {
             size: 5,
-            color: "grey",
-            opacity: 0.5,
+            color: colors,
+            opacity: 0.8,
             line: {
-              color: "lightgray",
+              color: "black",
               width: 1,
             },
           },
