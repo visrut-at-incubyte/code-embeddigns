@@ -36,27 +36,41 @@
         padding: 10px;
         border-radius: 5px;
       }
+      input,
+      button {
+        margin: 10px;
+      }
     </style>
   </head>
   <body>
     <div id="plot"></div>
     <div id="info">
+      <input type="text" id="search-input" placeholder="Enter file name..." />
+      <button onclick="searchAndPlot()">Search</button>
       <h2>File Information</h2>
       <div id="hover-info"></div>
       <h2>Source Code</h2>
       <pre><code id="source-code" class="hljs"></code></pre>
     </div>
     <script>
+      let globalData = []; // To store fetched data globally
+
       async function fetchData() {
         const response = await fetch("data.json");
         const data = await response.json();
+        globalData = data;
+        console.log(data.map((d) => d.base_name));
         return data;
       }
 
       function cosineSimilarity(vecA, vecB) {
-        let dotProduct = 0.0;
-        let normA = 0.0;
-        let normB = 0.0;
+        if (vecA === undefined || vecB === undefined) {
+          return 0;
+        }
+
+        let dotProduct = 0.0,
+          normA = 0.0,
+          normB = 0.0;
         for (let i = 0; i < vecA.length; i++) {
           dotProduct += vecA[i] * vecB[i];
           normA += vecA[i] * vecA[i];
@@ -87,10 +101,8 @@
         );
       }
 
-      async function runTSNEAndPlot() {
-        const data = await fetchData();
-        const vectors = data.map((item) => item.vector);
-
+      async function runTSNEAndPlot(data) {
+        let vectors = data.map((item) => item.vector);
         const tsne = new tsnejs.tSNE({
           dim: 3,
           perplexity: 5,
@@ -145,9 +157,7 @@
           title: "Visualization of Codebase",
         };
 
-        const plotData = [scatterPlot];
-
-        Plotly.newPlot("plot", plotData, layout);
+        Plotly.newPlot("plot", [scatterPlot], layout);
 
         const plot = document.getElementById("plot");
 
@@ -198,7 +208,36 @@
         });
       }
 
-      runTSNEAndPlot();
+      async function searchAndPlot() {
+        const inputVal = document
+          .getElementById("search-input")
+          .value.toLowerCase();
+        const targetData = globalData.find((item) =>
+          item.base_name.toLowerCase().includes(inputVal)
+        );
+
+        console.log(inputVal);
+
+        if (!targetData) {
+          alert("No files found with that name.");
+          return;
+        }
+
+        const targetVector = targetData.vector;
+        const filteredData = globalData.filter((item) => {
+          const similarity = cosineSimilarity(targetVector, item.vector);
+          console.log(similarity);
+          return similarity > 0.85;
+        });
+
+        if (filteredData.length > 0) {
+          runTSNEAndPlot(filteredData);
+        } else {
+          alert("No similar files found with a cosine similarity above 0.75.");
+        }
+      }
+
+      fetchData().then((data) => runTSNEAndPlot(data.slice(0, 100)));
     </script>
   </body>
 </html>
