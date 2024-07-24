@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import Plotly from "plotly.js-basic-dist";
-
-var tsnejs: any;
+import tsnejs from "tsne";
 
 const App: React.FC = () => {
   const plotContainer = useRef<HTMLDivElement>(null);
@@ -15,7 +14,9 @@ const App: React.FC = () => {
 
     const runTSNEAndPlot = async () => {
       const data = await fetchData();
-      const vectors = data.map((item: any) => item.vector);
+      let vectors = data.map((item: any) => item.vector);
+
+      vectors = vectors.splice(0, 200);
 
       const tsne = new tsnejs.tSNE({
         dim: 3,

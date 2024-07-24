@@ -38,6 +38,6 @@
     "plotly.js-basic-dist": "^2.34.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tsne-js": "^1.0.3"
+    "tsne": "^1.0.1"
   }
 }
